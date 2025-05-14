@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { AxiosError, isAxiosError } from "axios";
 import { apiClient } from "@/config/apiClient";
 import LoadingPage from "@/components/ui/loadingPage";
+import { addToast } from "@heroui/toast";
 
 // Definir la interfaz para la empresa
 export interface Empresa {
@@ -226,63 +227,133 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Función para crear una nueva empresa
-  const createEmpresa = async (empresa: EmpresaInput): Promise<Empresa> => {
-    setLoading(true);
-    setError(null);
-    setValidationErrors(null);
+ // Función para crear una nueva empresa
+const createEmpresa = async (empresa: EmpresaInput): Promise<Empresa> => {
+  setLoading(true);
+  setError(null);
+  setValidationErrors(null);
+  
+  try {
+    const response = await apiClient.post<ApiResponse<Empresa>>("/api/empresas", empresa);
     
-    try {
-      const response = await apiClient.post<ApiResponse<Empresa>>("/api/empresas", empresa);
+    if (response.data && response.data.success) {
+      const nuevaEmpresa = response.data.data;
+      setEmpresas([...empresas, nuevaEmpresa]);
       
-      if (response.data && response.data.success) {
-        const nuevaEmpresa = response.data.data;
-        setEmpresas([...empresas, nuevaEmpresa]);
-        return nuevaEmpresa;
-      } else {
-        throw new Error(response.data.message || "Error al crear empresa");
-      }
-    } catch (err) {
-      const errorMessage = handleApiError(err, "Error al crear empresa");
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
+      addToast({
+        title: "Empresa creada",
+        description: `Se ha creado la empresa ${nuevaEmpresa.Nombre} correctamente.`,
+        color: "success"
+      });
+      
+      return nuevaEmpresa;
+    } else {
+      throw new Error(response.data.message || "Error al crear empresa");
     }
-  };
+  } catch (err: any) {
+    const errorMessage = handleApiError(err, "Error al crear empresa");
+    setError(errorMessage);
+    
+    // Manejo específico para errores de validación (como el NIT duplicado)
+    if (err.response?.data?.errors) {
+      setValidationErrors(err.response.data.errors);
+      
+      // Mostrar cada error de validación como un toast separado
+      Object.entries(err.response.data.errors).forEach(([field, message]: [string, any]) => {
+        addToast({
+          title: `Error en ${field}`,
+          description: message,
+          color: "danger"
+        });
+      });
+    } else if (err.response?.status === 409) {
+      // Error específico para NIT duplicado
+      addToast({
+        title: "Error de duplicación",
+        description: "El NIT ingresado ya existe en el sistema.",
+        color: "danger"
+      });
+    } else {
+      // Error general
+      addToast({
+        title: "Error al crear empresa",
+        description: errorMessage,
+        color: "danger"
+      });
+    }
+    
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Función para actualizar una empresa
-  const updateEmpresa = async (id: string, empresa: EmpresaInput): Promise<Empresa> => {
-    setLoading(true);
-    setError(null);
-    setValidationErrors(null);
-    
-    try {
-      const response = await apiClient.put<ApiResponse<Empresa>>(`/api/empresas/${id}`, empresa);
+// Función para actualizar una empresa
+const updateEmpresa = async (id: string, empresa: EmpresaInput): Promise<Empresa> => {
+  setLoading(true);
+  setError(null);
+  setValidationErrors(null);
+  
+  try {
+    const response = await apiClient.put<ApiResponse<Empresa>>(`/api/empresas/${id}`, empresa);
+    if (response.data && response.data.success) {
+      const empresaActualizada = response.data.data;
       
-      if (response.data && response.data.success) {
-        const empresaActualizada = response.data.data;
-        
-        // Actualizar la lista de empresas
-        setEmpresas(empresas.map(emp => emp.id === id ? empresaActualizada : emp));
-        
-        // Si es la empresa actual, actualizarla también
-        if (currentEmpresa && currentEmpresa.id === id) {
-          setCurrentEmpresa(empresaActualizada);
-        }
-        
-        return empresaActualizada;
-      } else {
-        throw new Error(response.data.message || "Error al actualizar empresa");
+      // Actualizar la lista de empresas
+      setEmpresas(empresas.map(emp => emp.id === id ? empresaActualizada : emp));
+      
+      // Si es la empresa actual, actualizarla también
+      if (currentEmpresa && currentEmpresa.id === id) {
+        setCurrentEmpresa(empresaActualizada);
       }
-    } catch (err) {
-      const errorMessage = handleApiError(err, "Error al actualizar empresa");
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
+      
+      addToast({
+        title: "Empresa actualizada",
+        description: `Se ha actualizado la empresa ${empresaActualizada.Nombre} correctamente.`,
+        color: "success"
+      });
+      
+      return empresaActualizada;
+    } else {
+      throw new Error(response.data.message || "Error al actualizar empresa");
     }
-  };
+  } catch (err: any) {
+    const errorMessage = handleApiError(err, "Error al actualizar empresa");
+    setError(errorMessage);
+    
+    // Manejo específico para errores de validación (como el NIT duplicado)
+    if (err.response?.data?.errors) {
+      setValidationErrors(err.response.data.errors);
+      
+      // Mostrar cada error de validación como un toast separado
+      Object.entries(err.response.data.errors).forEach(([field, message]: [string, any]) => {
+        addToast({
+          title: `Error en ${field}`,
+          description: message,
+          color: "danger"
+        });
+      });
+    } else if (err.response?.status === 409) {
+      // Error específico para NIT duplicado
+      addToast({
+        title: "Error de duplicación", 
+        description: "El NIT ingresado ya existe en el sistema.",
+        color: "danger"
+      });
+    } else {
+      // Error general
+      addToast({
+        title: "Error al actualizar empresa",
+        description: errorMessage,
+        color: "danger"
+      });
+    }
+    
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Función para eliminar una empresa (soft delete)
   const deleteEmpresa = async (id: string): Promise<boolean> => {
@@ -410,7 +481,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Mostrar pantalla de carga durante la inicialización
   if (initializing) {
-    return <LoadingPage>Cargando datos de empresas</LoadingPage>;
+    return <LoadingPage>Cargando datos Empresas</LoadingPage>;
   }
 
   return (

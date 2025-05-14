@@ -12,24 +12,20 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@heroui/modal";
-import { addToast } from "@heroui/toast";
 import {
   Dropdown,
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
 } from "@heroui/dropdown";
-import { Select, SelectItem } from "@heroui/select";
 import {
   SearchIcon,
   FilterIcon,
   ChevronDownIcon,
-  UserIcon,
   BuildingIcon,
   XIcon,
   PlusIcon,
   EditIcon,
-  TrashIcon,
   CheckIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -37,6 +33,7 @@ import { useMediaQuery } from "react-responsive";
 import CustomTable, { SortDescriptor } from "@/components/ui/customTable";
 import { Empresa, useEmpresa } from "@/context/EmpresaContext";
 import { KeyboardEvent } from 'react';
+import ModalForm from "@/components/ui/modalForm";
 
 const GestionEmpresas = () => {
   // Responsive breakpoints
@@ -44,7 +41,7 @@ const GestionEmpresas = () => {
   const isTablet = useMediaQuery({ minWidth: 641, maxWidth: 1024 });
 
   // Estados para la tabla y paginación
-  const { empresas } = useEmpresa();
+  const { empresas, createEmpresa, updateEmpresa } = useEmpresa();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
@@ -64,9 +61,13 @@ const GestionEmpresas = () => {
     direction: "ascending",
   });
 
-  // Estado para el modal de detalle
-  const [modalOpen, setModalOpen] = useState(false);
+  // Estados para los modales
+  const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
+  
+  // Estados para el modal de formulario (crear/editar)
+  const [modalFormOpen, setModalFormOpen] = useState(false);
+  const [empresaParaEditar, setEmpresaParaEditar] = useState<Empresa | null>(null);
 
   // Aplicar filtros y ordenamiento localmente
   const applyFiltersAndSort = useCallback(() => {
@@ -192,40 +193,59 @@ const GestionEmpresas = () => {
     // La actualización del ordenamiento se maneja en el useEffect
   };
 
-  // Abrir modal para ver detalles
+  // Funciones para el modal de detalle
   const abrirModalDetalle = (id: string) => {
     setSelectedEmpresaId(id);
-    setModalOpen(true);
+    setModalDetalleOpen(true);
   };
 
-  // Cerrar modal
-  const cerrarModal = () => {
-    setModalOpen(false);
+  const cerrarModalDetalle = () => {
+    setModalDetalleOpen(false);
     setSelectedEmpresaId(null);
   };
 
-  // Función para manejar la selección o deselección de una empresa
-  const toggleSeleccionEmpresa = (empresa: Empresa) => {
-    // Verificar si la empresa ya está seleccionada
-    const isSelected = selectedEmpresas.some(
-      (item) => item.id === empresa.id
-    );
+  // Funciones para el modal de formulario (crear/editar)
+  const abrirModalCrear = () => {
+    setEmpresaParaEditar(null);
+    setModalFormOpen(true);
+  };
 
-    if (isSelected) {
-      // Quitar de la selección
-      setSelectedEmpresas((prev) =>
-        prev.filter((item) => item.id !== empresa.id)
-      );
+  const abrirModalEditar = (empresa: Empresa) => {
+    setEmpresaParaEditar(empresa);
+    setModalFormOpen(true);
+  };
+
+  const cerrarModalForm = () => {
+    setModalFormOpen(false);
+    setEmpresaParaEditar(null);
+  };
+
+  // Función para guardar empresa (nueva o editada)
+ const guardarEmpresa = async (empresaData: Empresa) => {
+  try {
+    if (empresaData.id) {
+      // Editar empresa existente
+      await updateEmpresa(empresaData.id, empresaData);
     } else {
-      // Añadir a la selección
-      setSelectedEmpresas((prev) => [...prev, empresa]);
+      // Crear nueva empresa
+      await createEmpresa(empresaData);
     }
-  };
 
-  // Limpiar selección de empresas
-  const limpiarSeleccion = () => {
-    setSelectedEmpresas([]);
-  };
+    // Si llegamos aquí, significa que la operación fue exitosa
+    // Cerrar modal después de guardar correctamente
+    cerrarModalForm();
+    
+  } catch (error) {
+    // Si hay un error, no hacemos nada aquí ya que los errores ya son manejados
+    // en las funciones createEmpresa y updateEmpresa con addToast
+    
+    // No cerramos el modal para que el usuario pueda corregir los datos
+    console.log("Error al guardar la empresa, el modal permanece abierto:", error);
+    
+    // Opcionalmente, puedes agregar un mensaje adicional para el usuario
+    // indicando que debe corregir los errores para continuar
+  }
+};
 
   // Renderizar chip de booleano
   const renderBooleanChip = (value: boolean) => {
@@ -257,14 +277,12 @@ const GestionEmpresas = () => {
       return ["Nombre", "NIT"];
     } else if (isTablet) {
       // En tablet mostramos más columnas
-      return ["Nombre", "NIT", "Nombre", "telefono"];
+      return ["Nombre", "NIT"];
     } else {
       // En desktop mostramos todas
       return [
         "Nombre",
         "NIT",
-        "Representante",
-        "Telefono",
         "requiere_osi",
         "paga_recargos"
       ];
@@ -287,22 +305,6 @@ const GestionEmpresas = () => {
         );
       case "NIT":
         return formatearNIT(empresa.NIT);
-      case "Representante":
-        return (
-          <div className="flex items-start">
-            <UserIcon className="h-4 w-4 text-gray-400 mt-0.5 mr-1 flex-shrink-0" />
-            <div>
-              <div>{empresa.Representante}</div>
-              {!isMobile && !isTablet && (
-                <div className="text-xs text-gray-500">
-                  CC: {empresa.Cedula || "N/A"}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case "Telefono":
-        return empresa.Telefono || "N/A";
       case "requiere_osi":
         return renderBooleanChip(empresa.requiere_osi);
       case "paga_recargos":
@@ -316,8 +318,6 @@ const GestionEmpresas = () => {
   const columnNames = {
     Nombre: "EMPRESA",
     NIT: "NIT",
-    Representante: "REPRESENTANTE",
-    Telefono: "TELÉFONO",
     requiere_osi: "REQUIERE OSI",
     paga_recargos: "PAGA RECARGOS"
   };
@@ -330,43 +330,14 @@ const GestionEmpresas = () => {
             Gestión de Empresas
           </h1>
           <Button
-            className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
             color="primary"
             radius="sm"
             startContent={<PlusIcon />}
+            onPress={abrirModalCrear}
           >
             Nueva Empresa
           </Button>
-        </div>
-        {/* Controles para la selección múltiple */}
-        <div className="flex items-center gap-2">
-          {selectedEmpresas.length > 0 && (
-            <>
-              <div className="hidden sm:flex items-center text-sm bg-gray-100 px-2 py-1 rounded">
-                <span className="text-emerald-600 font-bold">
-                  {selectedEmpresas.length}
-                </span>
-                <span className="ml-1 text-gray-500">seleccionadas</span>
-              </div>
-              <Button
-                color="danger"
-                radius="sm"
-                size="sm"
-                startContent={<TrashIcon className="h-4 w-4" />}
-                variant="light"
-              >
-                Eliminar Selección
-              </Button>
-              <Button
-                color="default"
-                size="sm"
-                variant="light"
-                onPress={limpiarSeleccion}
-              >
-                Limpiar
-              </Button>
-            </>
-          )}
         </div>
       </div>
       {/* Panel de filtros (siempre visible) */}
@@ -503,12 +474,13 @@ const GestionEmpresas = () => {
       {/* Tabla de empresas */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {useMemo(() => {
-          // Definir columnKey como una clave conocida del objeto columnNames
+          // Definir las columnas para la tabla personalizada
           const tableColumns = columnasVisibles.map((columnKey) => ({
             key: columnKey,
             label: columnNames[columnKey as keyof typeof columnNames],
-            renderCell: (empresa : Empresa) => renderCellContent(empresa, columnKey),
+            renderCell: (empresa: Empresa) => renderCellContent(empresa, columnKey),
           }));
+          
           // Añadir la columna de acciones
           tableColumns.push({
             key: "acciones",
@@ -520,24 +492,11 @@ const GestionEmpresas = () => {
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onPress={(e: any) => {
-                    e.stopPropagation();
-                    // Acción de eliminar
+                  onPress={() => {
+                    abrirModalEditar(empresa);
                   }}
                 >
                   <EditIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  color="danger"
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={(e: any) => {
-                    e.stopPropagation();
-                    // Acción de eliminar
-                  }}
-                >
-                  <TrashIcon className="h-4 w-4" />
                 </Button>
               </div>
             ),
@@ -564,11 +523,9 @@ const GestionEmpresas = () => {
                   <Spinner color="success" size="lg" />
                 </div>
               }
-              selectable={true}
               selectedItems={selectedEmpresas}
               sortDescriptor={sortDescriptor}
               onRowClick={(empresa) => abrirModalDetalle(empresa.id)}
-              onSelectionChange={toggleSeleccionEmpresa}
               onSortChange={handleSortChange}
             />
           );
@@ -603,12 +560,21 @@ const GestionEmpresas = () => {
         )}
       </div>
 
+      {/* Modal de formulario (crear/editar) */}
+      <ModalForm
+        isOpen={modalFormOpen}
+        onClose={cerrarModalForm}
+        onSave={guardarEmpresa}
+        empresaEditar={empresaParaEditar}
+        titulo={empresaParaEditar ? "Editar Empresa" : "Registrar Nueva Empresa"}
+      />
+
       {/* Modal de detalle de empresa */}
       <Modal
         backdrop="blur"
-        isOpen={modalOpen}
+        isOpen={modalDetalleOpen}
         size="2xl"
-        onClose={cerrarModal}
+        onClose={cerrarModalDetalle}
       >
         <ModalContent>
           {(onClose) => {
@@ -643,22 +609,18 @@ const GestionEmpresas = () => {
                               : "N/A"}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Representante</p>
-                          <p className="font-medium">{empresaSeleccionada.Representante || "N/A"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Cédula</p>
-                          <p className="font-medium">{empresaSeleccionada.Cedula || "N/A"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Teléfono</p>
-                          <p className="font-medium">{empresaSeleccionada.Telefono || "N/A"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Dirección</p>
-                          <p className="font-medium">{empresaSeleccionada.Direccion || "N/A"}</p>
-                        </div>
+                        {empresaSeleccionada.Cedula && (
+                          <div>
+                            <p className="text-sm text-gray-500">Cédula</p>
+                            <p className="font-medium">{empresaSeleccionada.Cedula}</p>
+                          </div>
+                        )}
+                        {empresaSeleccionada.Direccion && (
+                          <div>
+                            <p className="text-sm text-gray-500">Dirección</p>
+                            <p className="font-medium">{empresaSeleccionada.Direccion}</p>
+                          </div>
+                        )}
                         <div>
                           <p className="text-sm text-gray-500">Requiere OSI</p>
                           <p className="font-medium">{empresaSeleccionada.requiere_osi ? "Sí" : "No"}</p>
@@ -688,6 +650,14 @@ const GestionEmpresas = () => {
                     color="primary"
                     radius="sm"
                     startContent={<EditIcon className="h-4 w-4" />}
+                    onPress={() => {
+                      // Cerrar modal de detalle
+                      onClose();
+                      // Abrir modal de edición con la empresa seleccionada
+                      if (empresaSeleccionada) {
+                        abrirModalEditar(empresaSeleccionada);
+                      }
+                    }}
                   >
                     Editar Empresa
                   </Button>
@@ -697,7 +667,7 @@ const GestionEmpresas = () => {
           }}
         </ModalContent>
       </Modal>
-    </div >
+    </div>
   );
 };
 
