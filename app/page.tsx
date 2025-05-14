@@ -34,15 +34,15 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { useMediaQuery } from "react-responsive";
-import Link from "next/link";
-import CustomTable, { SortDescriptor, Column } from "@/components/ui/customTable";
-import { useEmpresa } from "@/context/EmpresaContext";
+import CustomTable, { SortDescriptor } from "@/components/ui/customTable";
+import { Empresa, useEmpresa } from "@/context/EmpresaContext";
+import { KeyboardEvent } from 'react';
 
 const GestionEmpresas = () => {
   // Responsive breakpoints
   const isMobile = useMediaQuery({ maxWidth: 640 });
   const isTablet = useMediaQuery({ minWidth: 641, maxWidth: 1024 });
-  
+
   // Estados para la tabla y paginación
   const { empresas } = useEmpresa();
   const [loading, setLoading] = useState(true);
@@ -50,67 +50,75 @@ const GestionEmpresas = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtroRequiereOSI, setFiltroRequiereOSI] = useState(null);
-  const [filtroPagaRecargos, setFiltroPagaRecargos] = useState(null);
-  
-  const [selectedEmpresas, setSelectedEmpresas] = useState([]);
+  const [filtroRequiereOSI, setFiltroRequiereOSI] = useState<boolean | null>(null);
+  const [filtroPagaRecargos, setFiltroPagaRecargos] = useState<boolean | null>(null);
+
+  const [selectedEmpresas, setSelectedEmpresas] = useState<Empresa[]>([]);
   const [totalResults, setTotalResults] = useState(0);
-  const [filteredEmpresas, setFilteredEmpresas] = useState([]);
-  const [displayedEmpresas, setDisplayedEmpresas] = useState([]);
-  
+  const [filteredEmpresas, setFilteredEmpresas] = useState<Empresa[]>([]);
+  const [displayedEmpresas, setDisplayedEmpresas] = useState<Empresa[]>([]);
+
   // Estado para ordenamiento
-  const [sortDescriptor, setSortDescriptor] = useState({
+  const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
     column: "Nombre",
     direction: "ascending",
   });
-  
+
   // Estado para el modal de detalle
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedEmpresaId, setSelectedEmpresaId] = useState(null);
-  
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
+
   // Aplicar filtros y ordenamiento localmente
   const applyFiltersAndSort = useCallback(() => {
     if (!empresas || empresas.length === 0) return;
-    
+
     let filtered = [...empresas];
-    
+
     // Aplicar filtro de búsqueda
     if (searchTerm) {
-      filtered = filtered.filter((empresa) => 
+      filtered = filtered.filter((empresa) =>
         empresa.Nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         empresa.NIT.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Aplicar filtro de requiere_osi
     if (filtroRequiereOSI !== null) {
-      filtered = filtered.filter((empresa) => 
+      filtered = filtered.filter((empresa) =>
         empresa.requiere_osi === filtroRequiereOSI
       );
     }
-    
+
     // Aplicar filtro de paga_recargos
     if (filtroPagaRecargos !== null) {
-      filtered = filtered.filter((empresa) => 
+      filtered = filtered.filter((empresa) =>
         empresa.paga_recargos === filtroPagaRecargos
       );
     }
-    
+
     // Aplicar ordenamiento
     const column = sortDescriptor.column;
     const direction = sortDescriptor.direction;
-    
+
     filtered.sort((a, b) => {
-      const valueA = a[column];
-      const valueB = b[column];
-      
+      const valueA = a[column as keyof Empresa];
+      const valueB = b[column as keyof Empresa];
+
+      // Manejar casos donde los valores son null o undefined
+      if (valueA === null || valueA === undefined) {
+        return direction === "ascending" ? -1 : 1; // Valores nulos al principio o al final
+      }
+      if (valueB === null || valueB === undefined) {
+        return direction === "ascending" ? 1 : -1; // Dependiendo de cómo quieras ordenar los nulos
+      }
+
       // Para valores string, usamos localCompare
       if (typeof valueA === 'string' && typeof valueB === 'string') {
-        return direction === "ascending" 
+        return direction === "ascending"
           ? valueA.localeCompare(valueB)
           : valueB.localeCompare(valueA);
       }
-      
+
       // Para valores booleanos o numéricos
       if (direction === "ascending") {
         return valueA > valueB ? 1 : -1;
@@ -118,23 +126,23 @@ const GestionEmpresas = () => {
         return valueA < valueB ? 1 : -1;
       }
     });
-    
+
     // Guardar resultados filtrados
     setFilteredEmpresas(filtered);
     setTotalResults(filtered.length);
-    
+
     // Calcular paginación
     const ITEMS_PER_PAGE = 10;
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
     setTotalPages(totalPages || 1);
-    
+
     // Aplicar paginación
     const start = (page - 1) * ITEMS_PER_PAGE;
     const paginatedData = filtered.slice(start, start + ITEMS_PER_PAGE);
     setDisplayedEmpresas(paginatedData);
-    
+
   }, [empresas, searchTerm, filtroRequiereOSI, filtroPagaRecargos, sortDescriptor, page]);
-  
+
   // Inicializar datos cuando cambia empresas
   useEffect(() => {
     if (empresas && empresas.length > 0) {
@@ -144,7 +152,7 @@ const GestionEmpresas = () => {
       setLoading(true);
     }
   }, [empresas]);
-  
+
   // Aplicar filtros cuando cambian
   useEffect(() => {
     applyFiltersAndSort();
@@ -156,20 +164,19 @@ const GestionEmpresas = () => {
     sortDescriptor,
     applyFiltersAndSort,
   ]);
-  
+
   // Manejar búsqueda
   const handleSearch = () => {
     setPage(1);
     // La actualización de filtrados se maneja en el useEffect
   };
-  
-  // Manejar búsqueda por tecla Enter
-  const handleSearchKeyPress = (e) => {
+
+  const handleSearchKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
-  
+
   // Resetear filtros
   const resetearFiltros = () => {
     setSearchTerm("");
@@ -178,32 +185,32 @@ const GestionEmpresas = () => {
     setPage(1);
     // La actualización de filtrados se maneja en el useEffect
   };
-  
+
   // Manejar cambio de ordenamiento
-  const handleSortChange = (descriptor) => {
+  const handleSortChange = (descriptor: SortDescriptor) => {
     setSortDescriptor(descriptor);
     // La actualización del ordenamiento se maneja en el useEffect
   };
-  
+
   // Abrir modal para ver detalles
-  const abrirModalDetalle = (id) => {
+  const abrirModalDetalle = (id: string) => {
     setSelectedEmpresaId(id);
     setModalOpen(true);
   };
-  
+
   // Cerrar modal
   const cerrarModal = () => {
     setModalOpen(false);
     setSelectedEmpresaId(null);
   };
-  
+
   // Función para manejar la selección o deselección de una empresa
-  const toggleSeleccionEmpresa = (empresa) => {
+  const toggleSeleccionEmpresa = (empresa: Empresa) => {
     // Verificar si la empresa ya está seleccionada
     const isSelected = selectedEmpresas.some(
       (item) => item.id === empresa.id
     );
-    
+
     if (isSelected) {
       // Quitar de la selección
       setSelectedEmpresas((prev) =>
@@ -214,18 +221,18 @@ const GestionEmpresas = () => {
       setSelectedEmpresas((prev) => [...prev, empresa]);
     }
   };
-  
+
   // Limpiar selección de empresas
   const limpiarSeleccion = () => {
     setSelectedEmpresas([]);
   };
-  
+
   // Renderizar chip de booleano
-  const renderBooleanChip = (value) => {
+  const renderBooleanChip = (value: boolean) => {
     const color = value ? "success" : "danger";
     const text = value ? "Sí" : "No";
     const icon = value ? <CheckIcon className="h-3 w-3 mr-1" /> : <XCircleIcon className="h-3 w-3 mr-1" />;
-    
+
     return (
       <Chip color={color} size="sm" variant="flat">
         <div className="flex items-center">
@@ -235,13 +242,14 @@ const GestionEmpresas = () => {
       </Chip>
     );
   };
-  
+
   // Formatear NIT
-  const formatearNIT = (nit) => {
+  const formatearNIT = (nit: string) => {
     if (!nit) return "N/A";
-    return nit;
+
+    return Number(nit.replace(/\D/g, '')).toLocaleString('es-CO');
   };
-  
+
   // Determinar las columnas a mostrar según el tamaño de pantalla
   const columnasVisibles = useMemo(() => {
     if (isMobile) {
@@ -249,7 +257,7 @@ const GestionEmpresas = () => {
       return ["Nombre", "NIT"];
     } else if (isTablet) {
       // En tablet mostramos más columnas
-      return ["Nombre", "NIT", "Representante", "requiere_osi"];
+      return ["Nombre", "NIT", "Nombre", "telefono"];
     } else {
       // En desktop mostramos todas
       return [
@@ -262,9 +270,9 @@ const GestionEmpresas = () => {
       ];
     }
   }, [isMobile, isTablet]);
-  
+
   // Renderizar el contenido de la celda basado en su tipo
-  const renderCellContent = (empresa, columnKey) => {
+  const renderCellContent = (empresa: Empresa, columnKey: string) => {
     switch (columnKey) {
       case "Nombre":
         return (
@@ -303,7 +311,7 @@ const GestionEmpresas = () => {
         return null;
     }
   };
-  
+
   // Map de nombres de columnas para mostrar
   const columnNames = {
     Nombre: "EMPRESA",
@@ -313,7 +321,7 @@ const GestionEmpresas = () => {
     requiere_osi: "REQUIERE OSI",
     paga_recargos: "PAGA RECARGOS"
   };
-  
+
   return (
     <div className="container mx-auto p-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
@@ -322,6 +330,7 @@ const GestionEmpresas = () => {
             Gestión de Empresas
           </h1>
           <Button
+            className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
             color="primary"
             radius="sm"
             startContent={<PlusIcon />}
@@ -379,16 +388,16 @@ const GestionEmpresas = () => {
           {(searchTerm ||
             filtroRequiereOSI !== null ||
             filtroPagaRecargos !== null) && (
-            <Button
-              className="sm:w-auto"
-              color="danger"
-              startContent={<XIcon className="h-4 w-4" />}
-              variant="light"
-              onPress={resetearFiltros}
-            >
-              Limpiar filtros
-            </Button>
-          )}
+              <Button
+                className="sm:w-auto"
+                color="danger"
+                startContent={<XIcon className="h-4 w-4" />}
+                variant="light"
+                onPress={resetearFiltros}
+              >
+                Limpiar filtros
+              </Button>
+            )}
         </div>
         {/* Filtros avanzados (siempre visibles) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -413,8 +422,8 @@ const GestionEmpresas = () => {
                     {filtroRequiereOSI === null
                       ? "Todos"
                       : filtroRequiereOSI
-                      ? "Sí"
-                      : "No"}
+                        ? "Sí"
+                        : "No"}
                   </div>
                 </Button>
               </DropdownTrigger>
@@ -457,8 +466,8 @@ const GestionEmpresas = () => {
                     {filtroPagaRecargos === null
                       ? "Todos"
                       : filtroPagaRecargos
-                      ? "Sí"
-                      : "No"}
+                        ? "Sí"
+                        : "No"}
                   </div>
                 </Button>
               </DropdownTrigger>
@@ -494,14 +503,12 @@ const GestionEmpresas = () => {
       {/* Tabla de empresas */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {useMemo(() => {
-          // Definir las columnas para la tabla personalizada
+          // Definir columnKey como una clave conocida del objeto columnNames
           const tableColumns = columnasVisibles.map((columnKey) => ({
             key: columnKey,
-            label: columnNames[columnKey],
-            renderCell: (empresa) =>
-              renderCellContent(empresa, columnKey),
+            label: columnNames[columnKey as keyof typeof columnNames],
+            renderCell: (empresa : Empresa) => renderCellContent(empresa, columnKey),
           }));
-          
           // Añadir la columna de acciones
           tableColumns.push({
             key: "acciones",
@@ -513,9 +520,9 @@ const GestionEmpresas = () => {
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onClick={(e) => {
+                  onPress={(e: any) => {
                     e.stopPropagation();
-                    // Acción de editar
+                    // Acción de eliminar
                   }}
                 >
                   <EditIcon className="h-4 w-4" />
@@ -525,7 +532,7 @@ const GestionEmpresas = () => {
                   isIconOnly
                   size="sm"
                   variant="light"
-                  onClick={(e) => {
+                  onPress={(e: any) => {
                     e.stopPropagation();
                     // Acción de eliminar
                   }}
@@ -535,7 +542,7 @@ const GestionEmpresas = () => {
               </div>
             ),
           });
-          
+
           return (
             <CustomTable
               className="rounded-t-lg"
@@ -595,7 +602,7 @@ const GestionEmpresas = () => {
           </div>
         )}
       </div>
-      
+
       {/* Modal de detalle de empresa */}
       <Modal
         backdrop="blur"
@@ -609,7 +616,7 @@ const GestionEmpresas = () => {
             const empresaSeleccionada = empresas?.find(
               (emp) => emp.id === selectedEmpresaId
             );
-            
+
             return (
               <>
                 <ModalHeader className="flex flex-col gap-1">
@@ -630,7 +637,11 @@ const GestionEmpresas = () => {
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">NIT</p>
-                          <p className="font-medium">{empresaSeleccionada.NIT || "N/A"}</p>
+                          <p className="font-medium">
+                            {empresaSeleccionada.NIT
+                              ? Number(empresaSeleccionada.NIT.replace(/\D/g, '')).toLocaleString('es-CO')
+                              : "N/A"}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Representante</p>
@@ -686,7 +697,7 @@ const GestionEmpresas = () => {
           }}
         </ModalContent>
       </Modal>
-    </div>
+    </div >
   );
 };
 
