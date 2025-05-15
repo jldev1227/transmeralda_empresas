@@ -17,8 +17,11 @@ import ModalForm from "@/components/ui/modalForm";
 import BuscadorFiltrosConductores, {
   FilterOptions,
 } from "@/components/ui/buscadorFiltros";
+import EmpresasTable from "@/components/ui/table";
+import ModalDetalleConductor from "@/components/ui/modalDetalle";
+import ModalDetalleEmpresa from "@/components/ui/modalDetalle";
 
-export default function GestionConductores() {
+export default function GestionEmpresas() {
   const {
     empresasState,
     fetchEmpresas,
@@ -43,11 +46,11 @@ export default function GestionConductores() {
 
   // Estados para los modales
   const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
-  const [selectedConductorId, setSelectedConductorId] = useState<string | null>(
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(
     null,
   );
   const [modalFormOpen, setModalFormOpen] = useState(false);
-  const [conductorParaEditar, setConductorParaEditar] =
+  const [empresaEditar, setEmpresaEditar] =
     useState<Empresa | null>(null);
 
   // Inicialización: cargar conductores
@@ -139,41 +142,41 @@ export default function GestionConductores() {
 
   // Funciones para el modal de detalle
   const abrirModalDetalle = (id: string) => {
-    setSelectedConductorId(id);
+    setSelectedEmpresaId(id);
     setModalDetalleOpen(true);
   };
 
   // Funciones para el modal de formulario (crear/editar)
   const abrirModalCrear = () => {
-    setConductorParaEditar(null);
+    setEmpresaEditar(null);
     setModalFormOpen(true);
   };
 
-  const abrirModalEditar = (conductor: Empresa) => {
-    setConductorParaEditar(conductor);
+  const abrirModalEditar = (empresa: Empresa) => {
+    setEmpresaEditar(empresa);
     setModalFormOpen(true);
   };
 
   const cerrarModalForm = () => {
     setModalFormOpen(false);
-    setConductorParaEditar(null);
+    setEmpresaEditar(null);
   };
 
   const cerrarModalDetalle = () => {
     setModalDetalleOpen(false);
-    setSelectedConductorId(null);
+    setSelectedEmpresaId(null);
   };
 
   // Función para guardar conductor (nueva o editada)
-  const guardarConductor = async (conductorData: Empresa) => {
+  const guardarEmpresa = async (empresaData: Empresa) => {
     try {
       setLoading(true);
-      if (conductorData.id) {
+      if (empresaData.id) {
         // Editar conductor existente
-        await updateEmpresa(conductorData.id, conductorData);
+        await updateEmpresa(empresaData.id, empresaData);
       } else {
         // Crear nuevo conductor
-        await createEmpresa(conductorData);
+        await createEmpresa(empresaData);
       }
 
       // Si llegamos aquí, significa que la operación fue exitosa
@@ -197,7 +200,7 @@ export default function GestionConductores() {
     <div className="container mx-auto p-5 sm:p-10 space-y-5">
       <div className="flex gap-3 flex-col sm:flex-row w-full items-start md:items-center justify-between">
         <h1 className="text-xl sm:text-2xl font-bold">
-          Gestión de Conductores
+          Gestión de Empresas
         </h1>
         <Button
           className="w-full sm:w-auto py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
@@ -235,7 +238,7 @@ export default function GestionConductores() {
       )}
 
       {/* Tabla de conductores con paginación */}
-      <ConductoresTable
+      <EmpresasTable
         abrirModalDetalle={abrirModalDetalle}
         abrirModalEditar={abrirModalEditar}
         currentItems={empresasState.data}
@@ -251,22 +254,22 @@ export default function GestionConductores() {
         currentPage={empresasState.currentPage}
       />
 
-      {/* Modal de formulario (crear/editar)
+      {/* {/* Modal de formulario (crear/editar) */}
       <ModalForm
-        conductorEditar={conductorParaEditar}
+        empresaEditar={empresaEditar}
         isOpen={modalFormOpen}
         titulo={
-          conductorParaEditar ? "Editar Empresa" : "Registrar Nuevo Empresa"
+          empresaEditar ? "Editar Empresa" : "Registrar Nuevo Empresa"
         }
         onClose={cerrarModalForm}
-        onSave={guardarConductor}
-      /> */}
+        onSave={guardarEmpresa}
+      />
 
       {/* Modal de detalle */}
-      {/* <ModalDetalleConductor
-        conductor={
+      <ModalDetalleEmpresa
+        empresa={
           empresasState.data.find(
-            (conductor) => conductor.id === selectedConductorId,
+            (empresa) => empresa.id === selectedEmpresaId,
           ) || null
         }
         isOpen={modalDetalleOpen}
@@ -274,13 +277,14 @@ export default function GestionConductores() {
         onEdit={() => {
           setModalDetalleOpen(false);
           setModalFormOpen(true);
-          setConductorParaEditar(
+          setEmpresaEditar(
             empresasState.data.find(
-              (conductor) => conductor.id === selectedConductorId,
+              (empresa) => empresa.id === selectedEmpresaId,
             ) || null,
           );
         }}
-      /> */}
+        abrirModalEditar={abrirModalDetalle}
+      />
     </div>
   );
 }
