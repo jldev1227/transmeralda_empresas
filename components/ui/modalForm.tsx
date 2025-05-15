@@ -30,7 +30,7 @@ const ModalForm: React.FC<ModalFormProps> = ({
 }) => {
   // Estado para almacenar los datos del formulario
   const [formData, setFormData] = useState<Partial<Empresa>>({
-    Nombre: "",
+    nombre: "",
     nit: "",
     requiere_osi: false,
     paga_recargos: false,
@@ -38,7 +38,7 @@ const ModalForm: React.FC<ModalFormProps> = ({
 
   // Estado para manejar la validación
   const [errores, setErrores] = useState({
-    Nombre: false,
+    nombre: false,
     nit: false,
   });
 
@@ -47,7 +47,7 @@ const ModalForm: React.FC<ModalFormProps> = ({
     if (empresaEditar) {
       setFormData({
         id: empresaEditar.id,
-        Nombre: empresaEditar.Nombre || "",
+        nombre: empresaEditar.nombre || "",
         nit: empresaEditar.nit || "",
         requiere_osi: empresaEditar.requiere_osi || false,
         paga_recargos: empresaEditar.paga_recargos || false,
@@ -55,7 +55,7 @@ const ModalForm: React.FC<ModalFormProps> = ({
     } else {
       // Resetear el formulario si no hay empresa para editar
       setFormData({
-        Nombre: "",
+        nombre: "",
         nit: "",
         requiere_osi: false,
         paga_recargos: false,
@@ -94,14 +94,14 @@ const ModalForm: React.FC<ModalFormProps> = ({
   const handleSave = () => {
     // Validaciones con operador de encadenamiento opcional
     const nuevosErrores = {
-      Nombre: !formData.Nombre?.trim(),
+      nombre: !formData.nombre?.trim(),
       nit: !formData.nit?.trim(),
     };
 
     setErrores(nuevosErrores);
 
     // Si hay errores, no continuar
-    if (nuevosErrores.Nombre || nuevosErrores.nit) {
+    if (nuevosErrores.nombre || nuevosErrores.nit) {
       return;
     }
 
@@ -139,12 +139,12 @@ const ModalForm: React.FC<ModalFormProps> = ({
               <div className="space-y-4">
                 <Input
                   isRequired
-                  errorMessage={errores.Nombre ? "El nombre es requerido" : ""}
-                  isInvalid={errores.Nombre}
+                  errorMessage={errores.nombre ? "El nombre es requerido" : ""}
+                  isInvalid={errores.nombre}
                   label="Nombre de la Empresa"
                   name="Nombre"
                   placeholder="Ingrese el nombre"
-                  value={formData.Nombre}
+                  value={formData.nombre}
                   onChange={handleChange}
                 />
 

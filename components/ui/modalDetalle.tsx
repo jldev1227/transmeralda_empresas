@@ -46,7 +46,7 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">Nombre</p>
-                        <p className="font-medium">{empresa.Nombre}</p>
+                        <p className="font-medium">{empresa.nombre}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">nit</p>
@@ -58,16 +58,16 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
                             : "N/A"}
                         </p>
                       </div>
-                      {empresa.Cedula && (
+                      {empresa.cedula && (
                         <div>
                           <p className="text-sm text-gray-500">Cédula</p>
-                          <p className="font-medium">{empresa.Cedula}</p>
+                          <p className="font-medium">{empresa.cedula}</p>
                         </div>
                       )}
-                      {empresa.Direccion && (
+                      {empresa.direccion && (
                         <div>
                           <p className="text-sm text-gray-500">Dirección</p>
-                          <p className="font-medium">{empresa.Direccion}</p>
+                          <p className="font-medium">{empresa.direccion}</p>
                         </div>
                       )}
                       <div>
