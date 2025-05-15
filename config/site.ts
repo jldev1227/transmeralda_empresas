@@ -1,7 +1,7 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Empresas - Transmeralda",
+  name: "Gestión de Empresas",
   description: "Make beautiful websites regardless of your design experience.",
   links: {
     github: "https://github.com/heroui-inc/heroui",
