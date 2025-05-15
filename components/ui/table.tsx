@@ -10,6 +10,8 @@ import {
   Check,
   AlertCircle,
   XCircle,
+  CheckIcon,
+  XCircleIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -18,11 +20,14 @@ import CustomTable, {
   Column,
   SortDescriptor,
 } from "@/components/ui/customTable";
+import { Chip } from "@heroui/chip";
 
 // Definimos todas las posibles columnas como un tipo
 export type EmpresaColumnKey =
   | "nombre"
   | "nit"
+  | "paga_recargos"
+  | "requiere_osi"
   | "acciones";
 
 interface EmpresasTableProps {
@@ -48,7 +53,7 @@ export default function EmpresasTable({
   sortDescriptor,
   onSortChange,
   selectedIds = [],
-  onSelectItem = () => {},
+  onSelectItem = () => { },
   isLoading = false,
   columnKeys,
   currentPage,
@@ -61,6 +66,22 @@ export default function EmpresasTable({
   // Breakpoints responsivos
   const isDesktop = useMediaQuery({ minWidth: 1024 });
   const isTablet = useMediaQuery({ minWidth: 768, maxWidth: 1023 });
+
+
+  const renderBooleanChip = (value: boolean) => {
+    const color = value ? "success" : "danger";
+    const text = value ? "Sí" : "No";
+    const icon = value ? <CheckIcon className="h-3 w-3 mr-1" /> : <XCircleIcon className="h-3 w-3 mr-1" />;
+
+    return (
+      <Chip color={color} size="sm" variant="flat">
+        <div className="flex items-center">
+          {icon}
+          {text}
+        </div>
+      </Chip>
+    );
+  };
 
 
   // Definir todas las columnas posibles
@@ -89,6 +110,22 @@ export default function EmpresasTable({
             {empresa.NIT}
           </div>
         </div>
+      ),
+    },
+    paga_recargos: {
+      key: "paga_recargos",
+      label: "PAGA RECARGOS",
+      allowsSorting: true,
+      renderCell: (empresa: Empresa) => (
+        renderBooleanChip(empresa.requiere_osi)
+      ),
+    },
+    requiere_osi: {
+      key: "requiere_osi",
+      label: "REQUIERE OSI",
+      allowsSorting: true,
+      renderCell: (empresa: Empresa) => (
+        renderBooleanChip(empresa.requiere_osi)
       ),
     },
     acciones: {
@@ -144,11 +181,13 @@ export default function EmpresasTable({
       displayColumns = [
         "nombre",
         "nit",
+        "paga_recargos",
+        "requiere_osi",
         "acciones",
       ];
     } else if (isTablet) {
       // Mostrar menos columnas en tablet
-      displayColumns = ["nombre", "acciones"];
+      displayColumns = ["nombre", "nit", "acciones",];
     } else {
       // Mostrar mínimo de columnas en móvil
       displayColumns = ["nombre", "acciones"];
@@ -203,22 +242,20 @@ export default function EmpresasTable({
       <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
         <div className="flex flex-1 justify-between sm:hidden">
           <button
-            className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${
-              currentPage === 1
+            className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${currentPage === 1
                 ? "text-gray-300 cursor-not-allowed"
                 : "text-gray-700 hover:bg-gray-50"
-            }`}
+              }`}
             disabled={currentPage === 1}
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           >
             Anterior
           </button>
           <button
-            className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${
-              currentPage === totalPages
+            className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium ${currentPage === totalPages
                 ? "text-gray-300 cursor-not-allowed"
                 : "text-gray-700 hover:bg-gray-50"
-            }`}
+              }`}
             disabled={currentPage === totalPages}
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           >
@@ -245,11 +282,10 @@ export default function EmpresasTable({
               className="isolate inline-flex -space-x-px rounded-md shadow-sm"
             >
               <button
-                className={`relative inline-flex items-center rounded-l-md px-2 py-2 ${
-                  currentPage === 1
+                className={`relative inline-flex items-center rounded-l-md px-2 py-2 ${currentPage === 1
                     ? "text-gray-300 cursor-not-allowed"
                     : "text-gray-500 hover:bg-gray-50"
-                }`}
+                  }`}
                 disabled={currentPage === 1}
                 onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               >
@@ -280,11 +316,10 @@ export default function EmpresasTable({
                 ) : (
                   <button
                     key={`page-${page}`}
-                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                      currentPage === page
+                    className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
                         ? "z-10 bg-emerald-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                         : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-                    }`}
+                      }`}
                     onClick={() =>
                       typeof page === "number" && onPageChange(page)
                     }
@@ -295,11 +330,10 @@ export default function EmpresasTable({
               )}
 
               <button
-                className={`relative inline-flex items-center rounded-r-md px-2 py-2 ${
-                  currentPage === totalPages
+                className={`relative inline-flex items-center rounded-r-md px-2 py-2 ${currentPage === totalPages
                     ? "text-gray-300 cursor-not-allowed"
                     : "text-gray-500 hover:bg-gray-50"
-                }`}
+                  }`}
                 disabled={currentPage === totalPages}
                 onClick={() =>
                   onPageChange(Math.min(totalPages, currentPage + 1))

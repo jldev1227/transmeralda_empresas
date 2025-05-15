@@ -10,6 +10,7 @@ import { Button } from "@heroui/button";
 import { Spinner } from "@heroui/spinner";
 import {
   BuildingIcon,
+  Edit,
   EditIcon
 } from "lucide-react";
 
@@ -29,7 +30,7 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
   isOpen,
   onClose,
   empresa,
-  abrirModalEditar
+  onEdit,
 }) => {
   if (!empresa) return null;
 
@@ -105,21 +106,18 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
                 >
                   Cerrar
                 </Button>
-                <Button
-                  color="primary"
-                  radius="sm"
-                  startContent={<EditIcon className="h-4 w-4" />}
-                  onPress={() => {
-                    // Cerrar modal de detalle
-                    onClose();
-                    // Abrir modal de edición con la empresa seleccionada
-                    if (empresa) {
-                      abrirModalEditar(empresa.id);
-                    }
-                  }}
-                >
-                  Editar Empresa
-                </Button>
+                {/* Botón de editar (opcional) */}
+                {onEdit && (
+                  <Button
+                    color="primary"
+                    radius="sm"
+                    startContent={<Edit className="h-4 w-4" />}
+                    variant="solid"
+                    onPress={onEdit}
+                  >
+                    Editar Empresa
+                  </Button>
+                )}
               </ModalFooter>
             </>
           );
