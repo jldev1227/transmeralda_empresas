@@ -495,7 +495,6 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Funciones de utilidad
   const handlePageChange = (page: number) => {
-    console.log(page);
     setEmpresasState((prevState) => ({
       ...prevState,
       currentPage: page,
@@ -559,8 +558,6 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
       const checkConnection = () => {
         const isConnected = socketService.isConnected();
 
-        console.log(isConnected)
-
         setSocketConnected(isConnected);
       };
 
@@ -590,8 +587,6 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
             timestamp: new Date(),
           },
         ]);
-
-        console.log(data)
 
         addToast({
           title: "Nueva Empresa",
