@@ -1,22 +1,30 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { AxiosError, isAxiosError } from "axios";
+import { addToast } from "@heroui/toast";
+
+import { useAuth } from "./AuthContext";
+
 import { apiClient } from "@/config/apiClient";
 import LoadingPage from "@/components/ui/loadingPage";
-import { addToast } from "@heroui/toast";
 import { SortDescriptor } from "@/components/ui/customTable";
-import { useAuth } from "./AuthContext";
 import socketService from "@/services/socketService";
 
 // Definir la interfaz para la empresa
 export interface Empresa {
   id: string;
-  NIT: string;
-  Nombre: string;
-  Representante: string;
-  Cedula: string;
-  Telefono: string;
-  Direccion: string;
+  nit: string;
+  nombre: string;
+  representante: string;
+  cedula: string;
+  telefono: number;
+  direccion: string;
   requiere_osi: boolean;
   paga_recargos: boolean;
   createdAt?: string;
@@ -36,12 +44,12 @@ export interface BusquedaParams {
 
 // Definir interfaz para crear/actualizar empresa
 export interface EmpresaInput {
-  NIT: string;
-  Nombre: string;
-  Representante: string;
-  Cedula: string;
-  Telefono: string;
-  Direccion: string;
+  nit: string;
+  nombre: string;
+  representante: string;
+  cedula: string;
+  telefono: string;
+  direccion: string;
   requiere_osi: boolean;
   paga_recargos: boolean;
 }
@@ -56,6 +64,9 @@ export interface ValidationError {
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
+  count?: number;
+  currentPage?: number;
+  totalPages?: number;
   message?: string;
   errores?: ValidationError[];
 }
@@ -67,6 +78,17 @@ export interface EmpresasState {
   currentPage: number;
 }
 
+export interface CrearEmpresaRequest {
+  nombre: string;
+  nit: string;
+  representante: string;
+  cedula: string;
+  telefono: number;
+  direccion: string;
+}
+
+export interface ActualizarEmpresaRequest
+  extends Partial<CrearEmpresaRequest> {}
 
 export interface SocketEventLog {
   eventName: string;
@@ -85,8 +107,11 @@ interface EmpresaContextType {
   // Operaciones CRUD
   fetchEmpresas: (paramsBusqueda: BusquedaParams) => Promise<void>;
   fetchEmpresaById: (id: string) => Promise<Empresa | null>;
-  createEmpresa: (empresa: EmpresaInput) => Promise<Empresa>;
-  updateEmpresa: (id: string, empresa: EmpresaInput) => Promise<Empresa>;
+  createEmpresa: (data: CrearEmpresaRequest) => Promise<Empresa | null>;
+  updateEmpresa: (
+    id: string,
+    data: ActualizarEmpresaRequest,
+  ) => Promise<Empresa | null>;
   deleteEmpresa: (id: string) => Promise<boolean>;
 
   // Funciones de utilidad
@@ -94,7 +119,6 @@ interface EmpresaContextType {
   handleSortChange: (descriptor: SortDescriptor) => void;
   clearError: () => void;
   setCurrentEmpresa: (empresa: Empresa | null) => void;
-
 
   // Propiedades para Socket.IO
   socketConnected: boolean;
@@ -105,9 +129,7 @@ interface EmpresaContextType {
 }
 
 // Crear el contexto con el valor predeterminado
-const EmpresaContext = createContext<EmpresaContextType | undefined>(
-  undefined,
-);
+const EmpresaContext = createContext<EmpresaContextType | undefined>(undefined);
 
 // Proveedor del contexto
 export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -119,12 +141,12 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
     totalPages: 1,
     currentPage: 1,
   });
-  const [currentEmpresa, setCurrentEmpresa] = useState<Empresa | null>(
-    null,
-  );
+  const [currentEmpresa, setCurrentEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationError[] | null>(null);
+  const [validationErrors, setValidationErrors] = useState<
+    ValidationError[] | null
+  >(null);
   const [initializing, setInitializing] = useState<boolean>(true);
 
   // Estado para Socket.IO
@@ -133,7 +155,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const { user } = useAuth();
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column: "Nombre",
+    column: "nombre",
     direction: "ascending",
   });
 
@@ -200,9 +222,6 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
         },
       );
 
-      console.log(response)
-
-
       if (response.data && response.data.success) {
         setEmpresasState({
           data: response.data.data,
@@ -216,7 +235,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("Respuesta no exitosa del servidor");
       }
     } catch (err) {
-      const errorMessage = handleApiError(err, "Error al obtener conductores");
+      const errorMessage = handleApiError(err, "Error al obtener empresas");
 
       setError(errorMessage);
     } finally {
@@ -232,18 +251,24 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
     setValidationErrors(null);
 
     try {
-      const response = await apiClient.get<ApiResponse<Empresa>>(`/api/empresas/${id}`);
+      const response = await apiClient.get<ApiResponse<Empresa>>(
+        `/api/empresas/${id}`,
+      );
 
       if (response.data && response.data.success) {
         const empresaData = response.data.data;
+
         setCurrentEmpresa(empresaData);
+
         return empresaData;
       } else {
         throw new Error("Respuesta no exitosa del servidor");
       }
     } catch (err) {
       const errorMessage = handleApiError(err, "Error al obtener la empresa");
+
       setError(errorMessage);
+
       return null;
     } finally {
       setLoading(false);
@@ -251,128 +276,177 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // Función para crear una nueva empresa
-  const createEmpresa = async (empresa: EmpresaInput): Promise<Empresa> => {
-    setLoading(true);
-    setError(null);
-    setValidationErrors(null);
+  const createEmpresa = async (data: CrearEmpresaRequest): Promise<Empresa> => {
+    // Cambiado el tipo de retorno para no permitir null
+    clearError();
 
     try {
-      const response = await apiClient.post<ApiResponse<Empresa>>("/api/empresas", empresa);
+      const response = await apiClient.post<ApiResponse<Empresa>>(
+        "/api/empresas",
+        data,
+      );
 
       if (response.data && response.data.success) {
-        const nuevaEmpresa = response.data.data;
-        setEmpresas([...empresas, nuevaEmpresa]);
-
-        addToast({
-          title: "Empresa creada",
-          description: `Se ha creado la empresa ${nuevaEmpresa.Nombre} correctamente.`,
-          color: "success"
-        });
-
-        return nuevaEmpresa;
+        return response.data.data;
       } else {
-        throw new Error(response.data.message || "Error al crear empresa");
+        throw new Error(response.data.message || "Error al crear conductor");
       }
     } catch (err: any) {
-      const errorMessage = handleApiError(err, "Error al crear empresa");
-      setError(errorMessage);
+      // Definir un mensaje de error predeterminado
+      let errorTitle = "Error al crear conductor";
+      let errorDescription = "Ha ocurrido un error inesperado.";
 
-      // Manejo específico para errores de validación (como el NIT duplicado)
-      if (err.response?.data?.errors) {
-        setValidationErrors(err.response.data.errors);
+      // Manejar errores específicos por código de estado
+      if (err.response) {
+        switch (err.response.status) {
+          case 400: // Bad Request
+            errorTitle = "Error en los datos enviados";
 
-        // Mostrar cada error de validación como un toast separado
-        Object.entries(err.response.data.errors).forEach(([field, message]: [string, any]) => {
-          addToast({
-            title: `Error en ${field}`,
-            description: message,
-            color: "danger"
-          });
-        });
-      } else if (err.response?.status === 409) {
-        // Error específico para NIT duplicado
-        addToast({
-          title: "Error de duplicación",
-          description: "El NIT ingresado ya existe en el sistema.",
-          color: "danger"
-        });
+            // Verificar si tenemos detalles específicos del error en la respuesta
+            if (err.response.data && err.response.data.message) {
+              errorDescription = err.response.data.message;
+            }
+
+            // Verificar si hay errores específicos en formato español (errores)
+            if (
+              err.response.data &&
+              err.response.data.errores &&
+              Array.isArray(err.response.data.errores)
+            ) {
+              // Mapeo de nombres de campos para mensajes más amigables
+              const fieldLabels: Record<string, string> = {
+                nombre: "nombre",
+                nit: "nit",
+              };
+
+              // Mostrar cada error de validación como un toast separado
+              let errorShown = false;
+
+              err.response.data.errores.forEach(
+                (error: { campo: string; mensaje: string }) => {
+                  errorShown = true;
+                  const fieldLabel = fieldLabels[error.campo] || error.campo;
+
+                  // Personalizar mensajes para errores comunes
+                  let customMessage = error.mensaje;
+
+                  if (error.mensaje.includes("must be unique")) {
+                    customMessage = `Este ${fieldLabel.toLowerCase()} ya está registrado en el sistema`;
+                  }
+
+                  addToast({
+                    title: `Error en ${fieldLabel}`,
+                    description: customMessage,
+                    color: "danger",
+                  });
+                },
+              );
+
+              // IMPORTANTE: Ya no hacemos return null aquí
+              // Solo actualizamos el mensaje de error general
+              if (errorShown) {
+                setError(errorDescription);
+                // Arrojamos un nuevo error en lugar de retornar null
+                throw new Error("Error de validación en los campos");
+              }
+            }
+
+            // Verificar errores específicos comunes en el mensaje
+            if (
+              errorDescription.includes("unique") ||
+              errorDescription.includes("duplicado")
+            ) {
+              // Error genérico de duplicación
+              errorTitle = "Datos duplicados";
+              errorDescription =
+                "Algunos de los datos ingresados ya existen en el sistema.";
+
+              // Intentar ser más específico basado en el mensaje completo
+              if (errorDescription.toLowerCase().includes("nombre")) {
+                errorTitle = "Nombre duplicado";
+                errorDescription = "Ya existe una empresa con este nombre.";
+              } else if (errorDescription.toLowerCase().includes("nit")) {
+                errorTitle = "nit duplicado";
+                errorDescription = "Ya existe una empresa con este nit.";
+              }
+            }
+            break;
+
+          // Los demás casos igual que antes...
+        }
+      } else if (err.request) {
+        // La solicitud fue hecha pero no se recibió respuesta
+        errorTitle = "Error de conexión";
+        errorDescription =
+          "No se pudo conectar con el servidor. Verifica tu conexión a internet.";
       } else {
-        // Error general
-        addToast({
-          title: "Error al crear empresa",
-          description: errorMessage,
-          color: "danger"
-        });
+        // Algo sucedió al configurar la solicitud que desencadenó un error
+        errorTitle = "Error en la solicitud";
+        errorDescription =
+          err.message || "Ha ocurrido un error al procesar la solicitud.";
       }
 
+      // Guardar el mensaje de error para referencia en el componente
+      setError(errorDescription);
+
+      // Mostrar el toast con el mensaje de error
+      addToast({
+        title: errorTitle,
+        description: errorDescription,
+        color: "danger",
+      });
+
+      // Registrar el error en la consola para depuración
+      console.error("Error detallado:", err);
+
+      // Siempre lanzamos el error, nunca retornamos null
       throw err;
-    } finally {
-      setLoading(false);
     }
+    // Ya no necesitamos un bloque finally aquí, el setLoading lo manejamos en guardarConductor
   };
 
   // Función para actualizar una empresa
-  const updateEmpresa = async (id: string, empresa: EmpresaInput): Promise<Empresa> => {
+  const updateEmpresa = async (
+    id: string,
+    data: ActualizarEmpresaRequest,
+  ): Promise<Empresa | null> => {
     setLoading(true);
-    setError(null);
-    setValidationErrors(null);
+    clearError();
 
     try {
-      const response = await apiClient.put<ApiResponse<Empresa>>(`/api/empresas/${id}`, empresa);
+      const response = await apiClient.put<ApiResponse<Empresa>>(
+        `/api/empresas/${id}`,
+        data,
+      );
+
       if (response.data && response.data.success) {
-        const empresaActualizada = response.data.data;
+        const conductorActualizado = response.data.data;
 
-        // Actualizar la lista de empresas
-        setEmpresas(empresas.map(emp => emp.id === id ? empresaActualizada : emp));
-
-        // Si es la empresa actual, actualizarla también
+        // Actualizar el currentConductor si corresponde al mismo ID
         if (currentEmpresa && currentEmpresa.id === id) {
-          setCurrentEmpresa(empresaActualizada);
+          setCurrentEmpresa(conductorActualizado);
         }
 
-        addToast({
-          title: "Empresa actualizada",
-          description: `Se ha actualizado la empresa ${empresaActualizada.Nombre} correctamente.`,
-          color: "success"
-        });
+        const params: BusquedaParams = {
+          page: empresasState.currentPage,
+        };
 
-        return empresaActualizada;
+        // Actualizar la lista de conductores
+        fetchEmpresas(params);
+
+        return conductorActualizado;
       } else {
-        throw new Error(response.data.message || "Error al actualizar empresa");
+        throw new Error("Respuesta no exitosa del servidor");
       }
-    } catch (err: any) {
-      const errorMessage = handleApiError(err, "Error al actualizar empresa");
+    } catch (err) {
+      const errorMessage = handleApiError(
+        err,
+        "Error al actualizar el conductor",
+      );
+
       setError(errorMessage);
 
-      // Manejo específico para errores de validación (como el NIT duplicado)
-      if (err.response?.data?.errors) {
-        setValidationErrors(err.response.data.errors);
-
-        // Mostrar cada error de validación como un toast separado
-        Object.entries(err.response.data.errors).forEach(([field, message]: [string, any]) => {
-          addToast({
-            title: `Error en ${field}`,
-            description: message,
-            color: "danger"
-          });
-        });
-      } else if (err.response?.status === 409) {
-        // Error específico para NIT duplicado
-        addToast({
-          title: "Error de duplicación",
-          description: "El NIT ingresado ya existe en el sistema.",
-          color: "danger"
-        });
-      } else {
-        // Error general
-        addToast({
-          title: "Error al actualizar empresa",
-          description: errorMessage,
-          color: "danger"
-        });
-      }
-
-      throw err;
+      return null;
     } finally {
       setLoading(false);
     }
@@ -381,37 +455,47 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
   // Función para eliminar una empresa (soft delete)
   const deleteEmpresa = async (id: string): Promise<boolean> => {
     setLoading(true);
-    setError(null);
-    setValidationErrors(null);
+    clearError();
 
     try {
-      const response = await apiClient.delete<ApiResponse<null>>(`/api/empresas/${id}`);
+      const response = await apiClient.delete<ApiResponse<any>>(
+        `/api/empresas/${id}`,
+      );
 
       if (response.data && response.data.success) {
-        // Eliminar la empresa de la lista local
-        setEmpresas(empresas.filter(emp => emp.id !== id));
-
-        // Si es la empresa actual, limpiarla
+        // Si el conductor eliminado es el actual, limpiarlo
         if (currentEmpresa && currentEmpresa.id === id) {
           setCurrentEmpresa(null);
         }
 
+        const params: BusquedaParams = {
+          page: empresasState.currentPage,
+        };
+
+        // Refrescar la lista después de eliminar
+        fetchEmpresas(params);
+
         return true;
       } else {
-        throw new Error(response.data.message || "Error al eliminar empresa");
+        throw new Error("Respuesta no exitosa del servidor");
       }
     } catch (err) {
-      const errorMessage = handleApiError(err, "Error al eliminar empresa");
+      const errorMessage = handleApiError(
+        err,
+        "Error al eliminar el conductor",
+      );
+
       setError(errorMessage);
+
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-
   // Funciones de utilidad
   const handlePageChange = (page: number) => {
+    console.log(page);
     setEmpresasState((prevState) => ({
       ...prevState,
       currentPage: page,
@@ -438,7 +522,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
     setValidationErrors(null);
   };
 
-    // Efecto que se ejecuta cuando cambia la página actual
+  // Efecto que se ejecuta cuando cambia la página actual
   useEffect(() => {
     const params: BusquedaParams = {
       page: empresasState.currentPage,
@@ -495,36 +579,36 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       };
 
-      const handleConductorCreado = (data: Conductor) => {
+      const handleConductorCreado = (data: Empresa) => {
         setSocketEventLogs((prev) => [
           ...prev,
           {
-            eventName: "conductor:creado",
+            eventName: "empresa:creado",
             data,
             timestamp: new Date(),
           },
         ]);
 
         addToast({
-          title: "Nuevo Conductor",
-          description: `Se ha creado un nuevo conductor: ${data.nombre} ${data.apellido}`,
+          title: "Nueva Empresa",
+          description: `Se ha creado un nuevo conductor: ${data.nombre} ${data.nit}`,
           color: "success",
         });
       };
 
-      const handleConductorActualizado = (data: Conductor) => {
+      const handleConductorActualizado = (data: Empresa) => {
         setSocketEventLogs((prev) => [
           ...prev,
           {
-            eventName: "conductor:actualizado",
+            eventName: "empresa:actualizado",
             data,
             timestamp: new Date(),
           },
         ]);
 
         addToast({
-          title: "Conductor Actualizado",
-          description: `Se ha actualizado la información del conductor: ${data.nombre} ${data.apellido}`,
+          title: "Empresa Actualizada",
+          description: `Se ha actualizado la información de la empresa: ${data.nombre} ${data.nit}`,
           color: "primary",
         });
       };
@@ -600,6 +684,5 @@ export const useEmpresa = (): EmpresaContextType => {
 
   return context;
 };
-
 
 export default EmpresaProvider;

@@ -5,12 +5,7 @@ import { Button } from "@heroui/button";
 import { PlusIcon } from "lucide-react";
 import { Alert } from "@heroui/alert";
 
-import {
-  Empresa,
-  useEmpresa,
-  BusquedaParams,
-} from "@/context/EmpresaContext";
-import ConductoresTable from "@/components/ui/table";
+import { Empresa, useEmpresa, BusquedaParams } from "@/context/EmpresaContext";
 import { SortDescriptor } from "@/components/ui/customTable";
 import ModalForm from "@/components/ui/modalForm";
 // import ModalDetalleConductor from "@/components/ui/modalDetalle";
@@ -18,16 +13,11 @@ import BuscadorFiltrosConductores, {
   FilterOptions,
 } from "@/components/ui/buscadorFiltros";
 import EmpresasTable from "@/components/ui/table";
-import ModalDetalleConductor from "@/components/ui/modalDetalle";
 import ModalDetalleEmpresa from "@/components/ui/modalDetalle";
 
 export default function GestionEmpresas() {
-  const {
-    empresasState,
-    fetchEmpresas,
-    createEmpresa,
-    updateEmpresa,
-  } = useEmpresa();
+  const { empresasState, fetchEmpresas, createEmpresa, updateEmpresa } =
+    useEmpresa();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
     column: "nombre",
@@ -50,16 +40,15 @@ export default function GestionEmpresas() {
     null,
   );
   const [modalFormOpen, setModalFormOpen] = useState(false);
-  const [empresaEditar, setEmpresaEditar] =
-    useState<Empresa | null>(null);
+  const [empresaEditar, setEmpresaEditar] = useState<Empresa | null>(null);
 
   // Inicialización: cargar conductores
   useEffect(() => {
-    cargarConductores();
+    cargarEmpresas();
   }, []);
 
   /// Función para cargar conductores con parámetros de búsqueda/filtros
-  const cargarConductores = async (
+  const cargarEmpresas = async (
     page: number = 1,
     searchTermParam?: string,
     filtrosParam?: FilterOptions,
@@ -70,8 +59,6 @@ export default function GestionEmpresas() {
       // Usar parámetros proporcionados o valores de estado actuales
       const currentSearchTerm =
         searchTermParam !== undefined ? searchTermParam : searchTerm;
-      const currentFiltros =
-        filtrosParam !== undefined ? filtrosParam : filtros;
 
       // Construir parámetros de búsqueda
       const params: BusquedaParams = {
@@ -84,6 +71,8 @@ export default function GestionEmpresas() {
       if (currentSearchTerm) {
         params.search = currentSearchTerm;
       }
+
+      console.log(currentSearchTerm);
 
       // Realizar la búsqueda
       await fetchEmpresas(params);
@@ -100,12 +89,12 @@ export default function GestionEmpresas() {
 
   // Manejar la búsqueda
   const handleSearch = async (termino: string) => {
-    await cargarConductores(1, termino, undefined);
+    await cargarEmpresas(1, termino, undefined);
   };
 
   // Manejar los filtros
   const handleFilter = async (nuevosFiltros: FilterOptions) => {
-    await cargarConductores(1, undefined, nuevosFiltros);
+    await cargarEmpresas(1, undefined, nuevosFiltros);
   };
 
   // Manejar reset de búsqueda y filtros
@@ -117,18 +106,18 @@ export default function GestionEmpresas() {
       estados: [],
     };
 
-    await cargarConductores(1, "", filtrosVacios);
+    await cargarEmpresas(1, "", filtrosVacios);
   };
 
   // Manejar cambio de página
   const handlePageChange = (page: number) => {
-    cargarConductores(page);
+    cargarEmpresas(page);
   };
 
   // Manejar cambio de ordenamiento
   const handleSortChange = (descriptor: SortDescriptor) => {
     setSortDescriptor(descriptor);
-    cargarConductores(1); // Volver a la primera página con el nuevo ordenamiento
+    cargarEmpresas(1); // Volver a la primera página con el nuevo ordenamiento
   };
 
   // Manejar la selección de conductores
@@ -184,7 +173,7 @@ export default function GestionEmpresas() {
       cerrarModalForm();
 
       // Recargar la lista de conductores con los filtros actuales
-      await cargarConductores(empresasState.currentPage);
+      await cargarEmpresas(empresasState.currentPage);
     } catch (error) {
       // Si hay un error, no hacemos nada aquí ya que los errores ya son manejados
       console.log(
@@ -199,9 +188,7 @@ export default function GestionEmpresas() {
   return (
     <div className="container mx-auto p-5 sm:p-10 space-y-5">
       <div className="flex gap-3 flex-col sm:flex-row w-full items-start md:items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-bold">
-          Gestión de Empresas
-        </h1>
+        <h1 className="text-xl sm:text-2xl font-bold">Gestión de Empresas</h1>
         <Button
           className="w-full sm:w-auto py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
           color="primary"
@@ -258,15 +245,14 @@ export default function GestionEmpresas() {
       <ModalForm
         empresaEditar={empresaEditar}
         isOpen={modalFormOpen}
-        titulo={
-          empresaEditar ? "Editar Empresa" : "Registrar Nuevo Empresa"
-        }
+        titulo={empresaEditar ? "Editar Empresa" : "Registrar Nuevo Empresa"}
         onClose={cerrarModalForm}
         onSave={guardarEmpresa}
       />
 
       {/* Modal de detalle */}
       <ModalDetalleEmpresa
+        abrirModalEditar={abrirModalDetalle}
         empresa={
           empresasState.data.find(
             (empresa) => empresa.id === selectedEmpresaId,
@@ -283,7 +269,6 @@ export default function GestionEmpresas() {
             ) || null,
           );
         }}
-        abrirModalEditar={abrirModalDetalle}
       />
     </div>
   );

@@ -1,6 +1,5 @@
 import React from "react";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
-import { useMediaQuery } from "react-responsive";
 
 export type SortDescriptor = {
   column: string;
@@ -76,8 +75,9 @@ const CustomTable: React.FC<CustomTableProps> = ({
             {columns.map((column) => (
               <th
                 key={column.key}
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${column.allowsSorting ? "cursor-pointer hover:bg-gray-100" : ""
-                  }`}
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                  column.allowsSorting ? "cursor-pointer hover:bg-gray-100" : ""
+                }`}
                 scope="col"
                 onClick={() => column.allowsSorting && handleSort(column.key)}
               >
@@ -122,13 +122,14 @@ const CustomTable: React.FC<CustomTableProps> = ({
             data.map((item, rowIndex) => (
               <tr
                 key={rowIndex}
-                className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectable &&
-                    selectedItems.some(
-                      (selected) => getItemId(selected) === getItemId(item),
-                    )
+                className={`hover:bg-gray-50 transition-colors cursor-pointer ${
+                  selectable &&
+                  selectedItems.some(
+                    (selected) => getItemId(selected) === getItemId(item),
+                  )
                     ? "bg-gray-100"
                     : ""
-                  }`}
+                }`}
                 onClick={() => onRowClick && onRowClick(item)}
               >
                 {selectable && (
@@ -147,7 +148,7 @@ const CustomTable: React.FC<CustomTableProps> = ({
                         className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
                         disabled={!onSelectionChange}
                         type="checkbox"
-                        onChange={() => { }} // Evitar warning de input sin onChange
+                        onChange={() => {}} // Evitar warning de input sin onChange
                       />
                     </div>
                   </td>

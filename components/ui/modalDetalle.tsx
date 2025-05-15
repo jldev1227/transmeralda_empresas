@@ -8,15 +8,9 @@ import {
 } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { Spinner } from "@heroui/spinner";
-import {
-  BuildingIcon,
-  Edit,
-  EditIcon
-} from "lucide-react";
+import { BuildingIcon, Edit } from "lucide-react";
 
-import {
-  Empresa,
-} from "@/context/EmpresaContext";
+import { Empresa } from "@/context/EmpresaContext";
 
 interface ModalDetalleEmpresaProps {
   isOpen: boolean;
@@ -35,12 +29,7 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
   if (!empresa) return null;
 
   return (
-    <Modal
-      backdrop="blur"
-      isOpen={isOpen}
-      size="2xl"
-      onClose={onClose}
-    >
+    <Modal backdrop="blur" isOpen={isOpen} size="2xl" onClose={onClose}>
       <ModalContent>
         {(onClose) => {
           return (
@@ -48,9 +37,7 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
               <ModalHeader className="flex flex-col gap-1">
                 <div className="flex items-center space-x-2">
                   <BuildingIcon className="h-5 w-5 text-emerald-600" />
-                  <h3 className="text-lg font-semibold">
-                    Detalle de Empresa
-                  </h3>
+                  <h3 className="text-lg font-semibold">Detalle de Empresa</h3>
                 </div>
               </ModalHeader>
               <ModalBody>
@@ -62,10 +49,12 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
                         <p className="font-medium">{empresa.Nombre}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-500">NIT</p>
+                        <p className="text-sm text-gray-500">nit</p>
                         <p className="font-medium">
-                          {empresa.NIT
-                            ? Number(empresa.NIT.replace(/\D/g, '')).toLocaleString('es-CO')
+                          {empresa.nit
+                            ? Number(
+                                empresa.nit.replace(/\D/g, ""),
+                              ).toLocaleString("es-CO")
                             : "N/A"}
                         </p>
                       </div>
@@ -83,11 +72,15 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
                       )}
                       <div>
                         <p className="text-sm text-gray-500">Requiere OSI</p>
-                        <p className="font-medium">{empresa.requiere_osi ? "Sí" : "No"}</p>
+                        <p className="font-medium">
+                          {empresa.requiere_osi ? "Sí" : "No"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Paga Recargos</p>
-                        <p className="font-medium">{empresa.paga_recargos ? "Sí" : "No"}</p>
+                        <p className="font-medium">
+                          {empresa.paga_recargos ? "Sí" : "No"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -123,7 +116,7 @@ const ModalDetalleEmpresa: React.FC<ModalDetalleEmpresaProps> = ({
           );
         }}
       </ModalContent>
-    </Modal >
+    </Modal>
   );
 };
 

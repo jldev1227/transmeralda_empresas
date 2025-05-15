@@ -152,7 +152,7 @@ const BuscadorFiltrosConductores: React.FC<BuscadorFiltrosConductoresProps> = ({
                 </button>
               )
             }
-            placeholder="Buscar por nombre o NIT"
+            placeholder="Buscar por nombre o nit"
             startContent={<Search className="text-gray-400" size={18} />}
             type="text"
             value={searchTerm}
@@ -164,7 +164,7 @@ const BuscadorFiltrosConductores: React.FC<BuscadorFiltrosConductoresProps> = ({
         {/* Botones de acción */}
         <div className="flex flex-wrap gap-2">
           <Button
-            className="w-full sm:w-auto py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
+            className="w-full xs:w-auto py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
             variant="solid"
             onPress={aplicarBusqueda}
           >
