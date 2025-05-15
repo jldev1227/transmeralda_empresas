@@ -559,6 +559,8 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
       const checkConnection = () => {
         const isConnected = socketService.isConnected();
 
+        console.log(isConnected)
+
         setSocketConnected(isConnected);
       };
 
@@ -579,7 +581,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       };
 
-      const handleConductorCreado = (data: Empresa) => {
+      const handleEmpresaCreado = (data: Empresa) => {
         setSocketEventLogs((prev) => [
           ...prev,
           {
@@ -589,6 +591,8 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
           },
         ]);
 
+        console.log(data)
+
         addToast({
           title: "Nueva Empresa",
           description: `Se ha creado un nuevo conductor: ${data.nombre} ${data.nit}`,
@@ -596,7 +600,7 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       };
 
-      const handleConductorActualizado = (data: Empresa) => {
+      const handleEmpresaActualizado = (data: Empresa) => {
         setSocketEventLogs((prev) => [
           ...prev,
           {
@@ -618,8 +622,8 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
       socketService.on("disconnect", handleDisconnect);
 
       // Registrar manejadores de eventos de conductores
-      socketService.on("conductor:creado", handleConductorCreado);
-      socketService.on("conductor:actualizado", handleConductorActualizado);
+      socketService.on("empresa:creado", handleEmpresaCreado);
+      socketService.on("empresa:actualizado", handleEmpresaActualizado);
 
       return () => {
         // Limpiar al desmontar
@@ -627,8 +631,8 @@ export const EmpresaProvider: React.FC<{ children: React.ReactNode }> = ({
         socketService.off("disconnect");
 
         // Limpiar manejadores de eventos de conductores
-        socketService.off("conductor:creado");
-        socketService.off("conductor:actualizado");
+        socketService.off("empresa:creado");
+        socketService.off("empresa:actualizado");
       };
     }
   }, [user?.id]);
